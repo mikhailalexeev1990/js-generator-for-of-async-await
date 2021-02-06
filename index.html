@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport"
+	      content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js" integrity="sha512-bZS47S7sPOxkjU/4Bt0zrhEtWx0y0CRkhEp8IckzK+ltifIIE9EMIMTuT/mEzoIMewUINruDBIR/jJnbguonqQ==" crossorigin="anonymous"></script>
+	<title>generator, for and async/await</title>
+</head>
+<body>
+<div id="dogs"></div>
+<script>
+
+	/**
+	 * free api - https://dog.ceo/dog-api/
+	 */
+	class Dogs {
+		#dogs = document.querySelector('#dogs');
+		#dogsAmount = 5;
+		#imagesAmount = 1;
+		#timeout = 1000;
+
+		/**
+		 * генератор выдает поочередно асинхронные данные
+		 */
+		async* getGeneratorData() {
+			let dogs = await this.getAllDogs();
+			let dogsNames = Object.keys(dogs.data.message);
+			let length = this.#dogsAmount ?? dogsNames.length;
+
+			for (let i = 0; i < length; i++) {
+				yield this.getDog(dogsNames[i]);
+			}
+		}
+
+		async sleep(timeout) {
+			return await new Promise(res => setTimeout(res, timeout));
+		}
+
+		async getAllDogs() {
+			return await axios.get('https://dog.ceo/api/breeds/list/all');
+		}
+
+		async getDog(dog) {
+			await this.sleep(this.#timeout);
+
+			return await (axios.get(`https://dog.ceo/api/breed/${dog}/images`));
+		}
+
+		/**
+		 * for await (let i of value)
+		 * как раз и позволяет получать асинхронные данные друг за другом
+		 */
+		async printDogs(data) {
+			for await (let res of data) {
+				let images = res.data.message;
+				let slice = this.#imagesAmount ? [0, this.#imagesAmount] : [];
+
+				images.slice(...slice).forEach(src => {
+					let image = new Image(100);
+					image.src = src;
+					this.#dogs.appendChild(image);
+				});
+			}
+		}
+	}
+
+	let dog = new Dogs()
+	dog.printDogs(dog.getGeneratorData())
+
+</script>
+</body>
+</html>
